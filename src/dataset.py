@@ -1,12 +1,8 @@
 from pathlib import Path
 
-import librosa
-import numpy as np
 import torch
 
 from torch.utils.data import Dataset
-
-from contants import SAMPLE_RATE, TARGET_FRAMES, N_MELS
 
 
 class FMADataset(Dataset):
@@ -14,17 +10,14 @@ class FMADataset(Dataset):
         self,
         tracks_df,
         genre_to_idx,
-        audio_root,
-        sample_rate=SAMPLE_RATE,
-        n_mels=N_MELS,
+        preprocessed_root,
     ):
         self.tracks = tracks_df
         self.genre_to_idx = genre_to_idx
 
-        self.audio_root = Path(audio_root)
-
-        self.sample_rate = sample_rate
-        self.n_mels = n_mels
+        self.preprocessed_root = Path(
+            preprocessed_root
+        )
 
     def __len__(self):
         return len(self.tracks)
@@ -35,47 +28,17 @@ class FMADataset(Dataset):
         track_id = sample.name
         genre = sample["track"]["genre_top"]
 
-        track_str = f"{track_id:06d}"
-
-        audio_path = (
-            self.audio_root
-            / track_str[:3]
-            / f"{track_str}.mp3"
+        tensor_path = (
+            self.preprocessed_root
+            / f"{track_id:06d}.pt"
         )
 
-        y_audio, sr = librosa.load(
-            audio_path,
-            sr=self.sample_rate,
+        x = torch.load(
+            tensor_path,
+            weights_only=True,
         )
 
-        mel = librosa.feature.melspectrogram(
-            y=y_audio,
-            sr=sr,
-            n_mels=self.n_mels,
-        )
-
-        mel_db = librosa.power_to_db(
-            mel,
-            ref=np.max,
-        )
-
-        x = torch.tensor(
-            mel_db,
-            dtype=torch.float32,
-        ).unsqueeze(0)
-
-        if x.shape[2] > TARGET_FRAMES:
-            x = x[:, :, :TARGET_FRAMES]
-        elif x.shape[2] < TARGET_FRAMES:
-            print("Not enough frames:", audio_path, x.shape)
-            pad = TARGET_FRAMES - x.shape[2]
-
-            x = torch.nn.functional.pad(
-                x,
-                (0, pad),  # pad right side of time dimension
-            )
-
-        y = torch.tensor(   
+        y = torch.tensor(
             self.genre_to_idx[genre],
             dtype=torch.long,
         )

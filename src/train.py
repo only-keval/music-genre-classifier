@@ -37,7 +37,7 @@ def main():
     dataset = FMADataset(
         tracks_df=tracks,
         genre_to_idx=genre_to_idx,
-        audio_root="data/fma_small",
+        preprocessed_root="data/preprocessed",
     )
 
     # DataLoader
