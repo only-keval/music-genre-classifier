@@ -66,8 +66,16 @@ class FMADataset(Dataset):
 
         if x.shape[2] > TARGET_FRAMES:
             x = x[:, :, :TARGET_FRAMES]
+        elif x.shape[2] < TARGET_FRAMES:
+            print("Not enough frames:", audio_path, x.shape)
+            pad = TARGET_FRAMES - x.shape[2]
 
-        y = torch.tensor(
+            x = torch.nn.functional.pad(
+                x,
+                (0, pad),  # pad right side of time dimension
+            )
+
+        y = torch.tensor(   
             self.genre_to_idx[genre],
             dtype=torch.long,
         )

@@ -13,9 +13,11 @@ def load_fma_small_metadata(
         index_col=0,
     )
 
-    audio_files = list(
-        Path(audio_root).rglob("*.mp3")
-    )
+    audio_files = []
+
+    for path in Path(audio_root).rglob("*.mp3"):
+        if path.stat().st_size > 100_000:
+            audio_files.append(path)
 
     track_ids = {
         int(file.stem)

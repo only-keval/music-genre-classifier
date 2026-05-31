@@ -1,63 +1,107 @@
-from pathlib import Path
-
-import pandas as pd
 import torch
+from torch.utils.data import DataLoader
 
 from dataset import FMADataset
+from metadata import (
+    load_fma_small_metadata,
+    build_label_mapping,
+)
 from model import GenreCNN
-from metadata import load_fma_small_metadata, build_label_mapping
+
+
+BATCH_SIZE = 32
+LEARNING_RATE = 1e-3
+EPOCHS = 5
 
 
 def main():
-    print("Loading metadata...")
+    device = torch.device(
+        "cuda"
+        if torch.cuda.is_available()
+        else "cpu"
+    )
 
-    small_tracks = load_fma_small_metadata()
-    genre_to_idx, idx_to_genre = build_label_mapping(small_tracks)
+    print(f"Using device: {device}")
 
-    print(f"Tracks: {len(small_tracks)}")
+    # Load metadata
+    tracks = load_fma_small_metadata()
+
+    genre_to_idx, idx_to_genre = (
+        build_label_mapping(tracks)
+    )
+
+    print(f"Tracks: {len(tracks)}")
     print(f"Genres: {len(genre_to_idx)}")
 
+    # Dataset
     dataset = FMADataset(
-        tracks_df=small_tracks,
+        tracks_df=tracks,
         genre_to_idx=genre_to_idx,
         audio_root="data/fma_small",
     )
 
-    print(f"Dataset size: {len(dataset)}")
+    # DataLoader
+    loader = DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+    )
 
-    print("\nLoading first sample...")
-
-    x, y = dataset[0]
-
-    print(f"x shape: {x.shape}")
-    print(f"x shape: {x.shape}")
-    print(f"label: {y.item()}")
-    print(f"genre: {idx_to_genre[y.item()]}")
-
+    # Model
     model = GenreCNN(
         num_classes=len(genre_to_idx)
+    ).to(device)
+
+    criterion = torch.nn.CrossEntropyLoss()
+
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=LEARNING_RATE,
     )
 
-    print("\nRunning forward pass...")
+    print("Starting training...")
 
-    x_batch = x.unsqueeze(0)
+    for epoch in range(EPOCHS):
+        model.train()
 
-    print(f"batch shape: {x_batch.shape}")
+        running_loss = 0.0
 
-    out = model(x_batch)
+        for batch_idx, (x, y) in enumerate(loader):
+            x = x.to(device)
+            y = y.to(device)
 
-    print(f"output shape: {out.shape}")
-    print(f"logits:\n{out}")
+            optimizer.zero_grad()
 
-    pred = torch.argmax(
-        out,
-        dim=1,
-    )
+            logits = model(x)
 
-    print(
-        f"\npredicted genre: "
-        f"{idx_to_genre[pred.item()]}"
-    )
+            loss = criterion(
+                logits,
+                y,
+            )
+
+            loss.backward()
+
+            optimizer.step()
+
+            running_loss += loss.item()
+
+            if batch_idx % 20 == 0:
+                print(
+                    f"Epoch {epoch + 1}/{EPOCHS} "
+                    f"Batch {batch_idx}/{len(loader)} "
+                    f"Loss: {loss.item():.4f}"
+                )
+
+        avg_loss = running_loss / len(loader)
+
+        print(
+            f"Epoch {epoch + 1} complete "
+            f"- Avg Loss: {avg_loss:.4f}"
+        )
+
+    print("Training complete")
 
 
 if __name__ == "__main__":
