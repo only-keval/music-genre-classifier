@@ -90,6 +90,9 @@ def main():
 
         running_loss = 0.0
 
+        train_correct = 0
+        train_total = 0
+
         for batch_idx, (x, y) in enumerate(train_loader):
             x = x.to(device)
             y = y.to(device)
@@ -97,6 +100,14 @@ def main():
             optimizer.zero_grad()
 
             logits = model(x)
+
+            predictions = logits.argmax(dim=1)
+
+            train_correct += (
+                predictions == y
+            ).sum().item()
+
+            train_total += y.size(0)
 
             loss = criterion(
                 logits,
@@ -117,6 +128,10 @@ def main():
             #     )
 
         avg_loss = running_loss / len(train_loader)
+
+        train_accuracy = (
+            train_correct / train_total
+        )
 
         model.eval()
 
@@ -143,6 +158,7 @@ def main():
         print(
             f"Epoch {epoch + 1} complete"
             f" - Avg Loss: {avg_loss:.4f}"
+            f" - Train Accuracy: {train_accuracy:.4f}"
             f" - Test Accuracy: {test_accuracy:.4f}"
         )
 
