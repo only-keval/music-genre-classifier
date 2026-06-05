@@ -6,18 +6,20 @@ class GenreCNN(nn.Module):
         super().__init__()
 
         self.network = nn.Sequential(
-            nn.Conv2d(1, 8, kernel_size=3, padding=1),
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
 
-            nn.Conv2d(8, 16, kernel_size=3, padding=1),
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
 
+            nn.AdaptiveAvgPool2d((1,1)),
             nn.Flatten(),
-
-            nn.LazyLinear(128),
+            nn.Linear(32, 128),
             nn.ReLU(),
+
+            nn.Dropout(0.3),
 
             nn.Linear(128, num_classes),
         )

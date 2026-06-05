@@ -9,10 +9,17 @@ from metadata import (
 )
 from model import GenreCNN
 
+import matplotlib
+matplotlib.use("QtAgg")
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+MODELS_DIR = Path("models")
+MODELS_DIR.mkdir(exist_ok=True)
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-EPOCHS = 50
+EPOCHS = 100
 
 
 def main():
@@ -81,10 +88,50 @@ def main():
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=LEARNING_RATE,
+        # weight_decay=1e-3,
     )
 
     print("Starting training...")
 
+    loss_history = []
+    train_acc_history = []
+    test_acc_history = []
+
+    plt.style.use("dark_background")
+
+    plt.rcParams["figure.facecolor"] = "#1e1e1e"
+    # plt.rcParams["axes.facecolor"] = "#252526"
+    plt.rcParams["axes.facecolor"] = "#1e1e1e"
+    plt.rcParams["savefig.facecolor"] = "#1e1e1e"
+
+    plt.rcParams["grid.color"] = "#3c3c3c"
+    plt.rcParams["grid.alpha"] = 0.6
+
+    plt.rcParams["axes.edgecolor"] = "#808080"
+    plt.rcParams["xtick.color"] = "#d4d4d4"
+    plt.rcParams["ytick.color"] = "#d4d4d4"
+    plt.rcParams["text.color"] = "#d4d4d4"
+    plt.rcParams["axes.labelcolor"] = "#d4d4d4"
+
+    loss_color = "#4e8cff"
+    train_color = "#00c29b"
+    test_color = "#c3890d"
+
+    plt.ion()
+
+    fig, (ax1, ax2) = plt.subplots(
+        1,
+        2,
+        figsize=(10, 5),
+    )
+
+    fig.tight_layout(pad=3.0)
+
+    fig.show()
+    plt.show(block=False)
+    plt.pause(0.1)
+
+    best_test_accuracy = 0.0
     for epoch in range(EPOCHS):
         model.train()
 
@@ -126,6 +173,8 @@ def main():
             #         f"Batch {batch_idx}/{len(train_loader)} "
             #         f"Loss: {loss.item():.4f}"
             #     )
+            if batch_idx % 20 == 0:
+                plt.pause(0.001)
 
         avg_loss = running_loss / len(train_loader)
 
@@ -155,6 +204,23 @@ def main():
 
         test_accuracy = correct / total
 
+        if test_accuracy > best_test_accuracy:
+            best_test_accuracy = test_accuracy
+
+            torch.save(
+                model.state_dict(),
+                MODELS_DIR / "best_model.pt",
+            )
+
+            print(
+                f"New best model saved "
+                f"(accuracy={best_test_accuracy:.4f})"
+            )
+
+        loss_history.append(avg_loss)
+        train_acc_history.append(train_accuracy)
+        test_acc_history.append(test_accuracy)
+
         print(
             f"Epoch {epoch + 1} complete"
             f" - Avg Loss: {avg_loss:.4f}"
@@ -162,7 +228,52 @@ def main():
             f" - Test Accuracy: {test_accuracy:.4f}"
         )
 
+        epochs = range(
+            1,
+            len(loss_history) + 1,
+        )
+
+        ax1.clear()
+        ax1.plot(
+            epochs,
+            loss_history,
+            color=loss_color,
+        )
+        ax1.set_title("Training Loss")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.grid(True)
+
+        ax2.clear()
+        ax2.plot(
+            epochs,
+            train_acc_history,
+            label="Train Accuracy",
+            color=train_color,
+        )
+        ax2.plot(
+            epochs,
+            test_acc_history,
+            label="Test Accuracy",
+            color=test_color,
+        )
+        ax2.set_title("Accuracy")
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Accuracy")
+        ax2.legend()
+        ax2.grid(True)
+
+        plt.draw()
+        plt.pause(0.01)
+
     print("Training complete")
+    print(
+        f"Best test accuracy: "
+        f"{best_test_accuracy:.4f}"
+    )
+
+    plt.ioff()
+    plt.show()
 
 
 if __name__ == "__main__":
