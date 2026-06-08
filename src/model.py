@@ -14,9 +14,9 @@ class GenreCNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
 
-            nn.AdaptiveAvgPool2d((4,4)),
+            nn.AdaptiveAvgPool2d((2,2)),
             nn.Flatten(),
-            nn.Linear(64 * 4 * 4, 128),
+            nn.Linear(64 * 2 * 2, 128),
             nn.ReLU(),
 
             nn.Dropout(0.1),
