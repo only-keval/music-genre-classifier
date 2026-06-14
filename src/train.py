@@ -171,7 +171,11 @@ def main():
             best_test_accuracy = test_accuracy
 
             torch.save(
-                model.state_dict(),
+                {
+                    "model_state_dict": model.state_dict(),
+                    "genre_to_idx": genre_to_idx,
+                    "idx_to_genre": idx_to_genre,
+                },
                 MODELS_DIR / "best_model.pt",
             )
 
