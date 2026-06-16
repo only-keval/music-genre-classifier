@@ -13,11 +13,11 @@ OUTPUT_ROOT = Path("data/preprocessed")
 
 
 def create_spectrogram(audio_path: Path) -> torch.Tensor:
-    y_audio, _ = librosa.load(
-        audio_path,
-        sr=SAMPLE_RATE,
-    )
+    y_audio, _ = librosa.load(audio_path, sr=SAMPLE_RATE)
+    return create_spectrogram_from_audio(y_audio)
 
+
+def create_spectrogram_from_audio(y_audio) -> torch.Tensor:
     mel = librosa.feature.melspectrogram(
         y=y_audio,
         sr=SAMPLE_RATE,

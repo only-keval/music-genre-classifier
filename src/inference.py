@@ -1,9 +1,13 @@
 from pathlib import Path
+import math
 
 import torch
+import librosa
 
 from model import GenreCNN
-from preprocess import create_spectrogram
+from preprocess import create_spectrogram_from_audio
+
+from constants import SAMPLE_RATE, CLIP_DURATION
 
 MODEL_PATH = Path("models/best_model_v3_61.pt")
 
@@ -36,18 +40,30 @@ def predict(
     audio_path,
     device,
 ):
-    x = create_spectrogram(audio_path)
+    audio, _ = librosa.load(audio_path, sr=SAMPLE_RATE)
 
-    x = x.unsqueeze(0)
-    x = x.to(device)
+    clip_logits = []
+    duration = int(librosa.get_duration(y=audio))
+    for i in range(math.ceil(duration / CLIP_DURATION)):
+        end_sec = min((i + 1) * CLIP_DURATION, duration)
+        start_sec = max(0, end_sec - CLIP_DURATION)
+        start, end = start_sec * SAMPLE_RATE, end_sec * SAMPLE_RATE
+        x = create_spectrogram_from_audio(audio[start:end])
 
-    with torch.no_grad():
-        logits = model(x)
+        x = x.unsqueeze(0)
+        x = x.to(device)
 
-        probs = torch.softmax(
-            logits,
-            dim=1,
-        )
+        with torch.no_grad():
+            logits = model(x)
+            clip_logits.append(logits)
+
+
+    mean_logits = torch.stack(clip_logits).mean(dim=0)
+
+    probs = torch.softmax(
+        mean_logits,
+        dim=1,
+    )
 
     return [
         (

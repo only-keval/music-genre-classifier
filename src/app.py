@@ -12,6 +12,7 @@ from inference import (
     predict,
 )
 from preprocess import create_spectrogram
+from constants import CLIP_DURATION
 
 st.set_page_config(
     page_title="Music Genre Classifier",
@@ -71,7 +72,7 @@ if uploaded_file is not None:
         st.audio(uploaded_file)
 
         duration = librosa.get_duration(path=audio_path)
-        if duration < 30:
+        if duration < CLIP_DURATION:
             st.warning(
                 "This model was trained on 30-second tracks. "
                 "Predictions for shorter clips may be less accurate."
